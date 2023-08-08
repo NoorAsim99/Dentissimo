@@ -1,0 +1,57 @@
+let Clinic = require("../models/clinics");
+
+//get the data of all the clinics and publish it to topic
+const getAllClinics = (mqttClient) => {
+    var clinicsArray = ''
+    Clinic.find({}, function (err, clinics) {
+        if (err) {
+            mqttClient.publish('clinichandler/error', 'Error with retrieving data')
+        } else {
+            // var clinicsDataString = JSON.stringify(clinics)
+            // console.log(clinicsDataString)
+            for (let i = 0; i < clinics.length; i++) {
+                clinicsArray = clinicsArray + `{
+    "coordinate": { "lat": ${clinics[i].coordinate.latitude}, "lng": ${clinics[i].coordinate.longitude} },
+                "openinghours": {
+                    "monday": { "open": "${clinics[i].openinghours.monday.open}", "close": "${clinics[i].openinghours.monday.close}" },
+                    "tuesday": { "open": "${clinics[i].openinghours.tuesday.open}", "close": "${clinics[i].openinghours.tuesday.open}" },
+                    "wednesday": { "open": "${clinics[i].openinghours.wednesday.open}", "close": "${clinics[i].openinghours.wednesday.open}" },
+                    "thursday": { "open": "${clinics[i].openinghours.thursday.open}", "close": "${clinics[i].openinghours.thursday.open}" },
+                    "friday": { "open": "${clinics[i].openinghours.friday.open}", "close": "${clinics[i].openinghours.friday.open}" }
+                },
+                "_id": "${clinics[i]._id}",
+                    "id": "${clinics[i].id}",
+                        "name": "${clinics[i].name}",
+                            "owner": "${clinics[i].owner}",
+                                "dentists": ${clinics[i].dentists},
+                                    "address": "${clinics[i].address}",
+                                        "city": "${clinics[i].city}",
+                                            "__v": ${clinics[i].__v}
+            }£`
+            }
+            clinicsArray = clinicsArray.slice(0, -1)
+
+            mqttClient.publish('frontend/clinicData', clinicsArray)
+        }
+    })
+};
+//get the data of one clinic based on its id 1-4
+const getOneClinic = function (mqttClient, clinicRequest) {
+    var json = JSON.parse(clinicRequest)
+    Clinic.findOne({ name: json.name }, function (err, clinic) {
+        if (err) {
+            mqttClient.publish('clinichandler/error', 'Error with retrieving data')
+        } else {
+            var clinicDataString = JSON.stringify(clinic)
+
+            mqttClient.publish('clinichandler/clinicData', clinicDataString)
+        }
+    })
+}
+
+
+module.exports = {
+    getAllClinics,
+    getOneClinic
+}
+
